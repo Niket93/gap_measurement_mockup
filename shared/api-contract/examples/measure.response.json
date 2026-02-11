@@ -1,0 +1,8 @@
+{
+    "measurement_mm": 3.218,
+    "confidence": "HIGH",
+    "qa_notes": [
+        "Reprojection RMS elevated: 1.023 mm"
+    ],
+    "annotated_image_base64_png": "<base64>"
+}
