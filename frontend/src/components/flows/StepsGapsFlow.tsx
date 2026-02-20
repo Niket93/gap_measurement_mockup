@@ -79,44 +79,16 @@ export function StepsGapsFlow({
         <div className="space-y-4">
           <ResultsCard
             result={flow.result}
+            isDefect={isDefect}
+            defectThresholdMm={defectThresholdMm}
+            onRegisterDefect={(measurementMm) => {
+              onRegisterDefect(measurementMm);
+              setToastMsg("Defect registered and sent to eSnag.");
+              setToastOpen(true);
+            }}
             onMeasureAnother={() => flow.resetAll()}
             mmFormatter={formatMm}
           />
-
-          <div className="rounded-[28px] border border-white/10 bg-white/5 backdrop-blur p-6">
-            <div className="text-xs text-white/60">Classification</div>
-            <div className="mt-1 text-2xl font-semibold">
-              {isDefect ? (
-                <span className="text-red-300">DEFECT</span>
-              ) : (
-                <span className="text-emerald-200">OK</span>
-              )}
-            </div>
-            <div className="mt-2 text-sm text-white/65">
-              Defect if gap &gt; {defectThresholdMm} mm
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              {isDefect ? (
-                <>
-                  <Button
-                    onClick={() => {
-                      onRegisterDefect(flow.result!.measurement_mm);
-                      setToastMsg("Defect registered and sent to eSnag.");
-                      setToastOpen(true);
-                    }}
-                  >
-                    Register defect &amp; send to eSnag
-                  </Button>
-                  <Button variant="secondary" onClick={() => flow.resetAll()}>
-                    Capture another
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={() => flow.resetAll()}>Capture another</Button>
-              )}
-            </div>
-          </div>
         </div>
       )}
 
