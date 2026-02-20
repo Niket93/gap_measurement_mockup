@@ -73,7 +73,7 @@ export function ResultsCard({
                                     onRegisterDefect(result.measurement_mm);
                                 }}
                             >
-                                Register defect &amp; send to eSnag
+                                Register Defect &amp; Send to eSnag!
                             </Button>
                             <Button variant="secondary" onClick={onMeasureAnother}>
                                 Capture another
