@@ -1,22 +1,27 @@
 import { cn } from "@/lib/utils/cn";
 
 export function Card({
-    title,
-    children,
-    className
+  title,
+  children,
+  className
 }: {
-    title?: string;
-    children: React.ReactNode;
-    className?: string;
+  title?: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
-    return (
-        <section className={cn("rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-sm", className)}>
-            {title && (
-                <header className="px-5 pt-5 pb-3 border-b border-zinc-100 dark:border-zinc-900">
-                    <h2 className="text-base font-semibold">{title}</h2>
-                </header>
-            )}
-            <div className="p-5">{children}</div>
-        </section>
-    );
+  return (
+    <section
+      className={cn(
+        "rounded-3xl border border-white/10 bg-white/5 backdrop-blur shadow-sm",
+        className
+      )}
+    >
+      {title && (
+        <header className="px-6 pt-6 pb-4 border-b border-white/10">
+          <h2 className="text-base font-semibold text-white">{title}</h2>
+        </header>
+      )}
+      <div className="p-6">{children}</div>
+    </section>
+  );
 }

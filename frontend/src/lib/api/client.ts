@@ -1,6 +1,5 @@
 import type { MeasureResponse, Point, PointMode } from "@/lib/api/types";
 
-// Prefer a configured base URL; otherwise fall back to same-origin in the browser.
 const API_BASE =
     (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/+$/, "") ||
     (typeof window !== "undefined" ? window.location.origin : "");

@@ -1,89 +1,49 @@
 "use client";
 
-import { useMemo } from "react";
-import { Stepper } from "@/components/common/Stepper";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { CameraCapture } from "@/components/camera/CameraCapture";
-import { ImageConfirm } from "@/components/image/ImageConfirm";
-import { PointPicker } from "@/components/image/PointPicker";
-import { ResultsCard } from "@/components/results/ResultsCard";
-import { useFlowStore } from "@/lib/state/flowStore";
-import { formatMm } from "@/lib/i18n/format";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/shell/AppShell";
 
-export default function Page() {
-    const flow = useFlowStore();
-    const step = flow.step;
+export default function SplashPage() {
+  const router = useRouter();
 
-    const steps = useMemo(
-        () => ["Capture", "Confirm", "Select Points", "Results"],
-        []
-    );
+  useEffect(() => {
+    const t = setTimeout(() => {
+      router.replace("/login");
+    }, 2_200);
+    return () => clearTimeout(t);
+  }, [router]);
 
-    return (
-        <div className="space-y-4">
-            <Stepper steps={steps} currentIndex={step} />
+  return (
+    <AppShell>
+      <div className="min-h-dvh grid place-items-center px-8">
+        <div className="w-full max-w-lg text-center">
+          <img
+            src="/assets/bombardier-logo.svg"
+            alt="Bombardier"
+            className="h-20 md:h-24 w-auto mx-auto opacity-95"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
 
-            {step === 0 && (
-                <Card title="Capture">
-                    <CameraCapture
-                        onCaptured={(img) => {
-                            flow.setImage(img);
-                            flow.setStep(1);
-                        }}
-                    />
-                </Card>
-            )}
+          <div className="mt-6 text-2xl md:text-3xl font-semibold tracking-tight">
+            Interior <span className="text-amber-300">X</span> Exterior Inspection App
+          </div>
 
-            {step === 1 && flow.image && (
-                <Card title="Confirm">
-                    <ImageConfirm
-                        image={flow.image}
-                        onBack={() => flow.resetToCapture()}
-                        onConfirm={() => flow.setStep(2)}
-                    />
-                </Card>
-            )}
+          <div className="mt-8 h-2 rounded-full bg-white/10 overflow-hidden">
+            <div className="h-full w-full animate-[progress_2s_linear_1] bg-white/40" />
+          </div>
+          <style jsx>{`
+            @keyframes progress {
+              from { transform: translateX(-100%); }
+              to { transform: translateX(0%); }
+            }
+          `}</style>
 
-            {step === 2 && flow.image && (
-                <Card title="Select Points">
-                    <PointPicker
-                        image={flow.image}
-                        mode={flow.pointMode}
-                        setMode={flow.setPointMode}
-                        points={flow.points}
-                        setPoints={flow.setPoints}
-                        onBack={() => flow.setStep(1)}
-                        onSubmit={async () => {
-                            await flow.submitMeasurement();
-                        }}
-                    />
-                </Card>
-            )}
-
-            {step === 3 && flow.result && (
-                <ResultsCard
-                    result={flow.result}
-                    onMeasureAnother={() => flow.resetAll()}
-                    mmFormatter={formatMm}
-                />
-            )}
-
-            {/* Global errors */}
-            {flow.error && (
-                <div
-                    role="alert"
-                    className="rounded-lg border border-red-300 bg-red-50 text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100 p-4"
-                >
-                    <div className="font-medium">Something went wrong</div>
-                    <div className="text-sm mt-1 whitespace-pre-wrap">{flow.error}</div>
-                    <div className="mt-3">
-                        <Button variant="secondary" onClick={() => flow.clearError()}>
-                            Dismiss
-                        </Button>
-                    </div>
-                </div>
-            )}
+          <div className="mt-3 text-xs text-white/55">Loading…</div>
         </div>
-    );
+      </div>
+    </AppShell>
+  );
 }
