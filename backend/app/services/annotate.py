@@ -14,6 +14,7 @@ def render_annotated_png_base64(
     points_px: List[Tuple[int, int]],
     measurement_mm: Optional[float],
     extra_notes: List[str],
+    gap_segments: Optional[List[Tuple[Tuple[int, int], Tuple[int, int]]]] = None,
 ) -> str:
     out = bgr.copy()
 
@@ -26,18 +27,29 @@ def render_annotated_png_base64(
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2, cv2.LINE_AA)
 
     # draw points + geometry
-    for i, p in enumerate(points_px):
-        cv2.circle(out, p, 6, (0, 255, 0), -1)
-        cv2.putText(out, str(i + 1), (p[0] + 8, p[1] - 8),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3, cv2.LINE_AA)
-        cv2.putText(out, str(i + 1), (p[0] + 8, p[1] - 8),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    if gap_segments:
+        for idx, (p1, p2) in enumerate(gap_segments, start=1):
+            cv2.circle(out, p1, 6, (0, 255, 0), -1)
+            cv2.circle(out, p2, 6, (0, 255, 0), -1)
+            cv2.line(out, p1, p2, (0, 0, 255), 2)
+            label = f"{idx}"
+            cv2.putText(out, label, (p1[0] + 8, p1[1] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(out, label, (p1[0] + 8, p1[1] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    else:
+        for i, p in enumerate(points_px):
+            cv2.circle(out, p, 6, (0, 255, 0), -1)
+            cv2.putText(out, str(i + 1), (p[0] + 8, p[1] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(out, str(i + 1), (p[0] + 8, p[1] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
 
-    if len(points_px) >= 2:
-        cv2.line(out, points_px[0], points_px[1], (0, 0, 255), 2)
-    if len(points_px) == 4:
-        poly = np.array(points_px, dtype=np.int32).reshape(-1, 1, 2)
-        cv2.polylines(out, [poly], True, (0, 0, 255), 2)
+        if len(points_px) >= 2:
+            cv2.line(out, points_px[0], points_px[1], (0, 0, 255), 2)
+        if len(points_px) == 4:
+            poly = np.array(points_px, dtype=np.int32).reshape(-1, 1, 2)
+            cv2.polylines(out, [poly], True, (0, 0, 255), 2)
 
     # header text
     header = f"Mode: {hom.mode_used}  Confidence: {hom.qa_confidence}"

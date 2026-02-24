@@ -24,6 +24,25 @@ class Settings(BaseSettings):
 
     profile_step_mm: float = Field(default=50.0, alias="GM_PROFILE_STEP_MM")
 
+    # Gap auto-detection (model inference)
+    gap_model_dir: str = Field(default="app/core/assets/models", alias="GM_GAP_MODEL_DIR")
+    gap_unetpp_ckpt: str = Field(default="app/core/assets/models/unetpp.pt", alias="GM_UNETPP_CKPT")
+    gap_dlv3_ckpt: str = Field(default="app/core/assets/models/deeplabv3.pt", alias="GM_DLV3_CKPT")
+    gap_encoder: str = Field(default="timm-efficientnet-b1", alias="GM_GAP_ENCODER")
+    gap_tile_size: int = Field(default=1024, alias="GM_GAP_TILE_SIZE")
+    gap_overlap: float = Field(default=0.25, alias="GM_GAP_OVERLAP")
+    gap_use_fusion: bool = Field(default=True, alias="GM_GAP_USE_FUSION")
+    gap_unetpp_thr: float = Field(default=0.5, alias="GM_GAP_UNETPP_THR")
+    gap_fusion_thr: float = Field(default=0.4, alias="GM_GAP_FUSION_THR")
+    gap_fusion_unetpp_weight: float = Field(default=0.5, alias="GM_GAP_FUSION_UNETPP_WEIGHT")
+    gap_fusion_dlv3_weight: float = Field(default=0.5, alias="GM_GAP_FUSION_DLV3_WEIGHT")
+    gap_min_area_px: int = Field(default=400, alias="GM_GAP_MIN_AREA_PX")
+    gap_min_length_px: float = Field(default=20.0, alias="GM_GAP_MIN_LENGTH_PX")
+    gap_morph_kernel: int = Field(default=5, alias="GM_GAP_MORPH_KERNEL")
+    gap_morph_iterations: int = Field(default=1, alias="GM_GAP_MORPH_ITERATIONS")
+    gap_max_segments: int = Field(default=0, alias="GM_GAP_MAX_SEGMENTS")
+    gap_device: str = Field(default="", alias="GM_GAP_DEVICE")
+
     # Board layout file path
     board_layout_path: str = Field(default="app/core/assets/board_layout.json")
 

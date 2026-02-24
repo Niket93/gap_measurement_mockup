@@ -29,7 +29,10 @@ export function StepsGapsFlow({
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
 
-  const isDefect = flow.result ? flow.result.measurement_mm > defectThresholdMm : false;
+  const maxGap = flow.result?.measurements?.length
+    ? Math.max(...flow.result.measurements.map((m) => m.gap_mm))
+    : flow.result?.measurement_mm ?? 0;
+  const isDefect = flow.result ? maxGap > defectThresholdMm : false;
 
   return (
     <div className="space-y-4">
@@ -63,6 +66,8 @@ export function StepsGapsFlow({
         <Card title="Select Points">
           <PointPicker
             image={flow.image}
+            selectionMode={flow.selectionMode}
+            setSelectionMode={flow.setSelectionMode}
             mode={flow.pointMode}
             setMode={flow.setPointMode}
             points={flow.points}

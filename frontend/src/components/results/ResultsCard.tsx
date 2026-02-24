@@ -19,6 +19,9 @@ export function ResultsCard({
     onMeasureAnother: () => void;
     mmFormatter: (v: number) => string;
 }) {
+    const maxGap = result.measurements?.length
+        ? Math.max(...result.measurements.map((m) => m.gap_mm))
+        : result.measurement_mm;
     return (
         <div className="space-y-4">
             <div className="rounded-[28px] border border-white/10 bg-white/5 backdrop-blur p-6">
@@ -45,7 +48,7 @@ export function ResultsCard({
                         (isDefect ? "text-red-200" : "text-emerald-200")
                     }
                 >
-                    {mmFormatter(result.measurement_mm)}
+                    {mmFormatter(maxGap)}
                 </div>
                 <div className="mt-2 text-sm text-white/70">
                     Confidence: <span className="font-medium text-white/90">{result.confidence}</span>
@@ -65,12 +68,23 @@ export function ResultsCard({
                     </div>
                 ) : null}
 
+                {result.measurements?.length ? (
+                    <div className="mt-4">
+                        <div className="text-xs text-white/60">Detected gaps</div>
+                        <ul className="text-sm list-disc pl-5 mt-1 space-y-1 text-white/80">
+                            {result.measurements.map((m, i) => (
+                                <li key={i}>Gap {i + 1}: {mmFormatter(m.gap_mm)}</li>
+                            ))}
+                        </ul>
+                    </div>
+                ) : null}
+
                 <div className="mt-5 flex flex-wrap gap-2">
                     {isDefect ? (
                         <>
                             <Button
                                 onClick={() => {
-                                    onRegisterDefect(result.measurement_mm);
+                                    onRegisterDefect(maxGap);
                                 }}
                             >
                                 Register Defect &amp; Send to eSnag!

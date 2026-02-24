@@ -15,13 +15,13 @@ function dataUrlToBlob(dataUrl: string): Blob {
 
 export async function measureGap(opts: {
     imageDataUrl: string;
-    mode: PointMode;
-    points: Point[];
+    mode: PointMode | "auto";
+    points?: Point[];
 }): Promise<MeasureResponse> {
     const form = new FormData();
     form.append("image", dataUrlToBlob(opts.imageDataUrl), "capture.jpg");
     form.append("mode", opts.mode);
-    form.append("points_json", JSON.stringify(opts.points));
+    form.append("points_json", JSON.stringify(opts.points ?? []));
 
     const res = await fetch(`${API_BASE}/measure`, {
         method: "POST",

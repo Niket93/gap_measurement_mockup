@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
-from app.schemas.measure import MeasureResponse, Point
+from app.schemas.measure import MeasureResponse, Point, GapMeasurement
 from app.services.image_io import decode_image_upload
 from app.services.aruco_detect import detect_aruco_markers, select_best_marker, build_marker_detections
 from app.services.homography import compute_homography
 from app.services.measurement import measure_gap_mm
 from app.services.annotate import render_annotated_png_base64
+from app.services.gap_detection import detect_gaps
 from app.core.config import settings
 from app.core.logging import get_logger
 
@@ -18,20 +19,24 @@ log = get_logger("measure")
 async def measure(
     image: UploadFile = File(...),
     mode: str = Form(...),
-    points_json: str = Form(...),
+    points_json: str | None = Form(None),
 ):
-    if mode not in ("2", "4"):
-        raise HTTPException(status_code=400, detail="mode must be '2' or '4'")
+    if mode not in ("2", "4", "auto"):
+        raise HTTPException(status_code=400, detail="mode must be '2', '4', or 'auto'")
 
-    try:
-        pts_raw = json.loads(points_json)
-        points = [Point(**p) for p in pts_raw]
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid points_json")
+    points: list[Point] = []
+    if mode in ("2", "4"):
+        if points_json is None:
+            raise HTTPException(status_code=400, detail="points_json is required for manual modes")
+        try:
+            pts_raw = json.loads(points_json)
+            points = [Point(**p) for p in pts_raw]
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid points_json")
 
-    needed = 2 if mode == "2" else 4
-    if len(points) != needed:
-        raise HTTPException(status_code=400, detail=f"Expected exactly {needed} points")
+        needed = 2 if mode == "2" else 4
+        if len(points) != needed:
+            raise HTTPException(status_code=400, detail=f"Expected exactly {needed} points")
 
     bgr = decode_image_upload(await image.read())
     h_img, w_img = bgr.shape[:2]
@@ -78,6 +83,43 @@ async def measure(
             annotated_image_base64_png=annotated
         )
 
+    if mode == "auto":
+        detection = detect_gaps(bgr)
+        if not detection.segments:
+            raise HTTPException(status_code=422, detail="No gaps detected.")
+
+        measurements: list[GapMeasurement] = []
+        gap_segments_px = []
+        for seg in detection.segments:
+            p1 = Point(x=float(seg.p1[0]), y=float(seg.p1[1]))
+            p2 = Point(x=float(seg.p2[0]), y=float(seg.p2[1]))
+            result = measure_gap_mm(hom.H_pix_to_mm, [p1, p2], mode="2", profile_step_mm=settings.profile_step_mm)
+            measurements.append(GapMeasurement(gap_mm=float(result.gap_mm), points_px=[p1, p2]))
+            gap_segments_px.append((seg.p1, seg.p2))
+
+        measurement_mm = max(m.gap_mm for m in measurements)
+        qa_notes = []
+        qa_notes.extend(hom.qa_reasons)
+        qa_notes.append(f"Auto-detected gaps: {len(measurements)}")
+
+        annotated = render_annotated_png_base64(
+            bgr=bgr,
+            detections=dets,
+            hom=hom,
+            points_px=[],
+            measurement_mm=measurement_mm,
+            extra_notes=qa_notes,
+            gap_segments=gap_segments_px,
+        )
+
+        return MeasureResponse(
+            measurement_mm=float(measurement_mm),
+            confidence=hom.qa_confidence,
+            qa_notes=qa_notes,
+            annotated_image_base64_png=annotated,
+            measurements=measurements,
+        )
+
     measurement = measure_gap_mm(hom.H_pix_to_mm, points, mode=mode, profile_step_mm=settings.profile_step_mm)
 
     annotated = render_annotated_png_base64(
@@ -97,5 +139,6 @@ async def measure(
         measurement_mm=float(measurement.gap_mm),
         confidence=hom.qa_confidence,
         qa_notes=qa_notes,
-        annotated_image_base64_png=annotated
+        annotated_image_base64_png=annotated,
+        measurements=[GapMeasurement(gap_mm=float(measurement.gap_mm), points_px=points)],
     )
