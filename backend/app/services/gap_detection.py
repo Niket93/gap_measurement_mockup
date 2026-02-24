@@ -6,8 +6,7 @@ from typing import List, Tuple
 
 import cv2
 import numpy as np
-import torch
-import segmentation_models_pytorch as smp
+from typing import Any
 
 from app.core.config import settings
 
@@ -26,7 +25,18 @@ class GapDetectionResult:
     mask: np.ndarray
 
 
-def build_model(model_name: str, encoder: str) -> torch.nn.Module:
+def _lazy_import_torch() -> Any:
+    import torch
+    return torch
+
+
+def _lazy_import_smp() -> Any:
+    import segmentation_models_pytorch as smp
+    return smp
+
+
+def build_model(model_name: str, encoder: str) -> Any:
+    smp = _lazy_import_smp()
     name = model_name.lower()
     if name in {"unetpp", "unet++", "unetplusplus"}:
         return smp.UnetPlusPlus(
@@ -47,7 +57,8 @@ def build_model(model_name: str, encoder: str) -> torch.nn.Module:
     raise ValueError(f"Unknown model_name: {model_name}")
 
 
-def load_checkpoint(model: torch.nn.Module, ckpt_path: Path, device: torch.device) -> None:
+def load_checkpoint(model: Any, ckpt_path: Path, device: Any) -> None:
+    torch = _lazy_import_torch()
     ckpt = torch.load(ckpt_path, map_location=device)
     if isinstance(ckpt, dict) and "model" in ckpt:
         state = ckpt["model"]
@@ -56,7 +67,8 @@ def load_checkpoint(model: torch.nn.Module, ckpt_path: Path, device: torch.devic
     model.load_state_dict(state, strict=True)
 
 
-def normalize_tile(tile_rgb: np.ndarray, mean: np.ndarray, std: np.ndarray) -> torch.Tensor:
+def normalize_tile(tile_rgb: np.ndarray, mean: np.ndarray, std: np.ndarray) -> Any:
+    torch = _lazy_import_torch()
     tile = tile_rgb.astype(np.float32) / 255.0
     tile = (tile - mean) / std
     tile = tile.transpose(2, 0, 1)
@@ -64,13 +76,13 @@ def normalize_tile(tile_rgb: np.ndarray, mean: np.ndarray, std: np.ndarray) -> t
 
 
 def tile_inference(
-    model: torch.nn.Module,
+    model: Any,
     img_rgb: np.ndarray,
     tile_size: int,
     overlap: float,
     mean: np.ndarray,
     std: np.ndarray,
-    device: torch.device,
+    device: Any,
 ) -> np.ndarray:
     h, w = img_rgb.shape[:2]
     tile_size = int(tile_size)
@@ -104,6 +116,7 @@ def tile_inference(
     accum = np.zeros((H, W), dtype=np.float32)
     count = np.zeros((H, W), dtype=np.float32)
 
+    torch = _lazy_import_torch()
     model.eval()
     with torch.no_grad():
         for y0 in range(0, H - tile_size + 1, stride):
@@ -129,7 +142,7 @@ def predict_prob_map(
     std: np.ndarray,
     ckpt_path: Path,
     overlap: float,
-    device: torch.device,
+    device: Any,
 ) -> np.ndarray:
     model = build_model(str(name), str(encoder)).to(device)
     load_checkpoint(model, ckpt_path, device)
@@ -188,6 +201,7 @@ def _segments_from_mask(mask: np.ndarray, min_area_px: int, min_len_px: float, m
 
 
 def detect_gaps(img_bgr: np.ndarray) -> GapDetectionResult:
+    torch = _lazy_import_torch()
     device = torch.device(settings.gap_device) if settings.gap_device else torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
     )
