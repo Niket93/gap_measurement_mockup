@@ -3,11 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
+import ssl
+import urllib.parse
+import urllib.request
 
 import cv2
 import numpy as np
 import torch
 import segmentation_models_pytorch as smp
+import certifi
 
 from app.core.config import settings
 
@@ -150,6 +154,37 @@ def _clean_mask(mask: np.ndarray, kernel_size: int, iterations: int) -> np.ndarr
     return out
 
 
+def _normalize_github_url(url: str) -> str:
+    if "github.com" in url and "/blob/" in url:
+        parts = url.split("github.com/", 1)[1]
+        parts = parts.replace("/blob/", "/", 1)
+        return "https://raw.githubusercontent.com/" + parts
+    return url
+
+
+def _download_file(url: str, dst_path: Path) -> None:
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = dst_path.with_suffix(dst_path.suffix + ".tmp")
+    # Use certifi CA bundle to avoid missing system certs in containers.
+    context = ssl.create_default_context(cafile=certifi.where())
+    with urllib.request.urlopen(url, context=context) as resp, open(tmp_path, "wb") as f:
+        f.write(resp.read())
+    tmp_path.replace(dst_path)
+
+
+def _resolve_checkpoint(local_path: Path, url: str, cache_dir: Path) -> Path:
+    if url:
+        normalized = _normalize_github_url(url)
+        filename = Path(urllib.parse.urlparse(normalized).path).name
+        if not filename:
+            filename = local_path.name
+        cached = cache_dir / filename
+        if not cached.exists():
+            _download_file(normalized, cached)
+        return cached
+    return local_path
+
+
 def _segments_from_mask(mask: np.ndarray, min_area_px: int, min_len_px: float, max_segments: int) -> List[GapSegment]:
     bin_mask = (mask > 0).astype(np.uint8)
     num, labels, stats, _ = cv2.connectedComponentsWithStats(bin_mask, connectivity=8)
@@ -196,8 +231,17 @@ def detect_gaps(img_bgr: np.ndarray) -> GapDetectionResult:
     tile_size = settings.gap_tile_size
     overlap = settings.gap_overlap
 
-    unet_ckpt = Path(settings.gap_unetpp_ckpt).resolve()
-    dlv3_ckpt = Path(settings.gap_dlv3_ckpt).resolve()
+    cache_dir = Path(settings.gap_model_cache_dir)
+    unet_ckpt = _resolve_checkpoint(
+        Path(settings.gap_unetpp_ckpt).resolve(),
+        settings.gap_unetpp_url,
+        cache_dir,
+    )
+    dlv3_ckpt = _resolve_checkpoint(
+        Path(settings.gap_dlv3_ckpt).resolve(),
+        settings.gap_dlv3_url,
+        cache_dir,
+    )
 
     if settings.gap_use_fusion:
         unet_prob = predict_prob_map(

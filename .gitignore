@@ -15,3 +15,5 @@ backend/.pytest_cache
 
 # Logs
 *.log
+
+backend/app/core/assets/models/
