@@ -1,0 +1,7 @@
+command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+env:
+  GM_UNETPP_CKPT: app/core/assets/models/unetpp.pt
+  GM_DLV3_CKPT: app/core/assets/models/deeplabv3.pt
+  GM_GAP_USE_FUSION: "true"
+  GM_GAP_FUSION_THR: "0.4"
+  GM_GAP_DEVICE: ""

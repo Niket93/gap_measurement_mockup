@@ -8,6 +8,7 @@ from app.services.aruco_detect import detect_aruco_markers, select_best_marker, 
 from app.services.homography import compute_homography
 from app.services.measurement import measure_gap_mm
 from app.services.annotate import render_annotated_png_base64
+from app.services.gap_detection import detect_gaps
 from app.core.config import settings
 from app.core.logging import get_logger
 
@@ -83,7 +84,6 @@ async def measure(
         )
 
     if mode == "auto":
-        from app.services.gap_detection import detect_gaps
         detection = detect_gaps(bgr)
         if not detection.segments:
             raise HTTPException(status_code=422, detail="No gaps detected.")
