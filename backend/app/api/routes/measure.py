@@ -85,17 +85,18 @@ async def measure(
 
     if mode == "auto":
         detection = detect_gaps(bgr)
-        if not detection.segments:
+        if not detection.quads:
             raise HTTPException(status_code=422, detail="No gaps detected.")
 
         measurements: list[GapMeasurement] = []
-        gap_segments_px = []
-        for seg in detection.segments:
-            p1 = Point(x=float(seg.p1[0]), y=float(seg.p1[1]))
-            p2 = Point(x=float(seg.p2[0]), y=float(seg.p2[1]))
-            result = measure_gap_mm(hom.H_pix_to_mm, [p1, p2], mode="2", profile_step_mm=settings.profile_step_mm)
-            measurements.append(GapMeasurement(gap_mm=float(result.gap_mm), points_px=[p1, p2]))
-            gap_segments_px.append((seg.p1, seg.p2))
+        gap_quads_px: list[list[tuple[int, int]]] = []
+        for quad in detection.quads:
+            quad_points = [Point(x=float(p[0]), y=float(p[1])) for p in quad.points]
+            result = measure_gap_mm(hom.H_pix_to_mm, quad_points, mode="4", profile_step_mm=settings.profile_step_mm)
+            widths = result.widths_mm or []
+            gap_mm = float(max(widths)) if widths else float(result.gap_mm)
+            measurements.append(GapMeasurement(gap_mm=gap_mm, points_px=quad_points, widths_mm=widths))
+            gap_quads_px.append(quad.points)
 
         measurement_mm = max(m.gap_mm for m in measurements)
         qa_notes = []
@@ -109,7 +110,7 @@ async def measure(
             points_px=[],
             measurement_mm=measurement_mm,
             extra_notes=qa_notes,
-            gap_segments=gap_segments_px,
+            gap_quads=gap_quads_px,
         )
 
         return MeasureResponse(
@@ -140,5 +141,11 @@ async def measure(
         confidence=hom.qa_confidence,
         qa_notes=qa_notes,
         annotated_image_base64_png=annotated,
-        measurements=[GapMeasurement(gap_mm=float(measurement.gap_mm), points_px=points)],
+        measurements=[
+            GapMeasurement(
+                gap_mm=float(measurement.gap_mm),
+                points_px=points,
+                widths_mm=measurement.widths_mm,
+            )
+        ],
     )

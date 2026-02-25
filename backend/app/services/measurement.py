@@ -10,6 +10,7 @@ from app.schemas.measure import Point
 class MeasurementResult:
     gap_mm: float
     qa_notes: List[str]
+    widths_mm: List[float]
 
 def _apply_homography_points(H: np.ndarray, pts: np.ndarray) -> np.ndarray:
     pts = np.asarray(pts, dtype=np.float64).reshape(-1, 2)
@@ -30,20 +31,8 @@ def _order_quad(pts: np.ndarray) -> np.ndarray:
     bl = pts[np.argmax(diff)]
     return np.stack([tl, tr, br, bl], axis=0)
 
-def measure_gap_mm(H_pix_to_mm: np.ndarray, points: List[Point], mode: Literal["2", "4"], profile_step_mm: float) -> MeasurementResult:
-    pts_px = np.array([[p.x, p.y] for p in points], dtype=np.float64)
-    pts_mm = _apply_homography_points(H_pix_to_mm, pts_px)
-
-    qa: List[str] = []
-
-    if mode == "2":
-        d = float(np.linalg.norm(pts_mm[1] - pts_mm[0]))
-        if d <= 0.0:
-            qa.append("Computed gap is non-positive; check point placement.")
-        return MeasurementResult(gap_mm=d, qa_notes=qa)
-
-    # mode == "4": profile across the quad; gap is mean width
-    quad = _order_quad(pts_mm)
+def _profile_widths_mm(quad_mm: np.ndarray, profile_step_mm: float) -> List[float]:
+    quad = _order_quad(quad_mm)
     TL, TR, BR, BL = quad
 
     top = TR - TL
@@ -74,10 +63,28 @@ def measure_gap_mm(H_pix_to_mm: np.ndarray, points: List[Point], mode: Literal["
             end = BL + t * bottom
             widths.append(float(np.linalg.norm(end - start)))
 
+    return widths
+
+
+def measure_gap_mm(H_pix_to_mm: np.ndarray, points: List[Point], mode: Literal["2", "4"], profile_step_mm: float) -> MeasurementResult:
+    pts_px = np.array([[p.x, p.y] for p in points], dtype=np.float64)
+    pts_mm = _apply_homography_points(H_pix_to_mm, pts_px)
+
+    qa: List[str] = []
+
+    if mode == "2":
+        d = float(np.linalg.norm(pts_mm[1] - pts_mm[0]))
+        if d <= 0.0:
+            qa.append("Computed gap is non-positive; check point placement.")
+        return MeasurementResult(gap_mm=d, qa_notes=qa, widths_mm=[])
+
+    # mode == "4": profile across the quad; gap is mean width
+    widths = _profile_widths_mm(pts_mm, profile_step_mm)
+
     gap = float(np.mean(widths))
     if gap <= 0:
         qa.append("Computed mean width is non-positive; check point ordering and marker detection.")
     if widths:
         qa.append(f"Profile width range: {min(widths):.2f}–{max(widths):.2f} mm")
 
-    return MeasurementResult(gap_mm=gap, qa_notes=qa)
+    return MeasurementResult(gap_mm=gap, qa_notes=qa, widths_mm=widths)

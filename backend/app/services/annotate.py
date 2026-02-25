@@ -15,6 +15,7 @@ def render_annotated_png_base64(
     measurement_mm: Optional[float],
     extra_notes: List[str],
     gap_segments: Optional[List[Tuple[Tuple[int, int], Tuple[int, int]]]] = None,
+    gap_quads: Optional[List[List[Tuple[int, int]]]] = None,
 ) -> str:
     out = bgr.copy()
 
@@ -27,7 +28,19 @@ def render_annotated_png_base64(
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2, cv2.LINE_AA)
 
     # draw points + geometry
-    if gap_segments:
+    if gap_quads:
+        for idx, quad in enumerate(gap_quads, start=1):
+            poly = np.array(quad, dtype=np.int32).reshape(-1, 1, 2)
+            cv2.polylines(out, [poly], True, (0, 0, 255), 2)
+            for p in quad:
+                cv2.circle(out, p, 5, (0, 255, 0), -1)
+            p0 = quad[0]
+            label = f"{idx}"
+            cv2.putText(out, label, (p0[0] + 8, p0[1] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(out, label, (p0[0] + 8, p0[1] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    elif gap_segments:
         for idx, (p1, p2) in enumerate(gap_segments, start=1):
             cv2.circle(out, p1, 6, (0, 255, 0), -1)
             cv2.circle(out, p2, 6, (0, 255, 0), -1)

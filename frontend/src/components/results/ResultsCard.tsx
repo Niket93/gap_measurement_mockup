@@ -73,7 +73,12 @@ export function ResultsCard({
                         <div className="text-xs text-white/60">Detected gaps</div>
                         <ul className="text-sm list-disc pl-5 mt-1 space-y-1 text-white/80">
                             {result.measurements.map((m, i) => (
-                                <li key={i}>Gap {i + 1}: {mmFormatter(m.gap_mm)}</li>
+                                <li key={i}>
+                                    Gap {i + 1}: {mmFormatter(m.gap_mm)}
+                                    {m.widths_mm?.length
+                                        ? ` (samples: ${m.widths_mm.length}, min: ${mmFormatter(Math.min(...m.widths_mm))}, max: ${mmFormatter(Math.max(...m.widths_mm))})`
+                                        : ""}
+                                </li>
                             ))}
                         </ul>
                     </div>

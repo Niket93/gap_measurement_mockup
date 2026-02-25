@@ -10,6 +10,7 @@ class Point(BaseModel):
 class GapMeasurement(BaseModel):
     gap_mm: float
     points_px: List[Point]
+    widths_mm: List[float] = Field(default_factory=list)
 
 class MeasureResponse(BaseModel):
     measurement_mm: float

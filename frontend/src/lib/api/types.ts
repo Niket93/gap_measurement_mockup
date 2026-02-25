@@ -7,6 +7,7 @@ export type SelectionMode = "manual" | "auto";
 export type GapMeasurement = {
     gap_mm: number;
     points_px: Point[];
+    widths_mm?: number[];
 };
 
 export type MeasureResponse = {

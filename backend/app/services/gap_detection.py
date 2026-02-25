@@ -19,13 +19,12 @@ NORMALIZE_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 NORMALIZE_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 @dataclass
-class GapSegment:
-    p1: Tuple[int, int]
-    p2: Tuple[int, int]
+class GapQuad:
+    points: List[Tuple[int, int]]
 
 @dataclass
 class GapDetectionResult:
-    segments: List[GapSegment]
+    quads: List[GapQuad]
     prob_map: np.ndarray
     mask: np.ndarray
 
@@ -185,41 +184,38 @@ def _resolve_checkpoint(local_path: Path, url: str, cache_dir: Path) -> Path:
     return local_path
 
 
-def _segments_from_mask(mask: np.ndarray, min_area_px: int, min_len_px: float, max_segments: int) -> List[GapSegment]:
+def _quads_from_mask(mask: np.ndarray, min_area_px: int, min_len_px: float, max_quads: int) -> List[GapQuad]:
     bin_mask = (mask > 0).astype(np.uint8)
     num, labels, stats, _ = cv2.connectedComponentsWithStats(bin_mask, connectivity=8)
-    segments: List[GapSegment] = []
+    quads: List[GapQuad] = []
 
+    candidates = []
     for label in range(1, num):
         area = int(stats[label, cv2.CC_STAT_AREA])
         if area < min_area_px:
             continue
 
         ys, xs = np.where(labels == label)
-        if xs.size < 2:
+        if xs.size < 4:
             continue
 
         pts = np.column_stack([xs, ys]).astype(np.float32)
-        mean = pts.mean(axis=0)
-        cov = np.cov(pts - mean, rowvar=False)
-        vals, vecs = np.linalg.eigh(cov)
-        axis = vecs[:, int(np.argmax(vals))]
-        proj = (pts - mean) @ axis
-        p1 = mean + axis * float(proj.min())
-        p2 = mean + axis * float(proj.max())
-
-        if float(np.linalg.norm(p2 - p1)) < min_len_px:
+        rect = cv2.minAreaRect(pts)
+        (w, h) = rect[1]
+        if min(w, h) < float(min_len_px):
             continue
 
-        segments.append(GapSegment(
-            p1=(int(round(p1[0])), int(round(p1[1]))),
-            p2=(int(round(p2[0])), int(round(p2[1]))),
-        ))
+        box = cv2.boxPoints(rect)
+        quad_pts = [(int(round(p[0])), int(round(p[1]))) for p in box]
+        candidates.append((area, quad_pts))
 
-        if max_segments > 0 and len(segments) >= max_segments:
+    candidates.sort(key=lambda x: -x[0])
+    for _area, quad_pts in candidates:
+        quads.append(GapQuad(points=quad_pts))
+        if max_quads > 0 and len(quads) >= max_quads:
             break
 
-    return segments
+    return quads
 
 
 def detect_gaps(img_bgr: np.ndarray) -> GapDetectionResult:
@@ -289,11 +285,11 @@ def detect_gaps(img_bgr: np.ndarray) -> GapDetectionResult:
 
     mask = (prob_map >= float(thr)).astype(np.uint8) * 255
     mask = _clean_mask(mask, settings.gap_morph_kernel, settings.gap_morph_iterations)
-    segments = _segments_from_mask(
+    quads = _quads_from_mask(
         mask,
         settings.gap_min_area_px,
         settings.gap_min_length_px,
         settings.gap_max_segments,
     )
 
-    return GapDetectionResult(segments=segments, prob_map=prob_map, mask=mask)
+    return GapDetectionResult(quads=quads, prob_map=prob_map, mask=mask)
