@@ -29,14 +29,14 @@ class Settings(BaseSettings):
     gap_unetpp_ckpt: str = Field(default="app/core/assets/models/unetpp.pt", alias="GM_UNETPP_CKPT")
     gap_dlv3_ckpt: str = Field(default="app/core/assets/models/deeplabv3.pt", alias="GM_DLV3_CKPT")
     gap_unetpp_url: str = Field(
-        default="https://github.com/Niket93/gap_detection_cv_models/blob/main/deeplabv3.pt",
+        default="https://github.com/Niket93/gap_detection_cv_models/blob/main/unetpp.pt",
         alias="GM_UNETPP_URL",
     )
     gap_dlv3_url: str = Field(
-        default="https://github.com/Niket93/gap_detection_cv_models/blob/main/unetpp.pt",
+        default="https://github.com/Niket93/gap_detection_cv_models/blob/main/deeplabv3.pt",
         alias="GM_DLV3_URL",
     )
-    gap_model_cache_dir: str = Field(default="/app/models", alias="GM_GAP_MODEL_CACHE_DIR")
+    gap_model_cache_dir: str = Field(default="/tmp/gap_models", alias="GM_GAP_MODEL_CACHE_DIR")
     gap_encoder: str = Field(default="timm-efficientnet-b1", alias="GM_GAP_ENCODER")
     gap_tile_size: int = Field(default=1024, alias="GM_GAP_TILE_SIZE")
     gap_overlap: float = Field(default=0.25, alias="GM_GAP_OVERLAP")
