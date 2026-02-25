@@ -4,6 +4,7 @@ frontend/.next
 frontend/out
 frontend/.turbo
 frontend/.env.local
+.env
 
 # Python
 backend/.venv

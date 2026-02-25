@@ -1,8 +1,6 @@
 import type { MeasureResponse, Point, PointMode } from "@/lib/api/types";
 
-const API_BASE =
-    (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/+$/, "") ||
-    (typeof window !== "undefined" ? window.location.origin : "");
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/+$/, "");
 
 function dataUrlToBlob(dataUrl: string): Blob {
     const [meta, b64] = dataUrl.split(",");
@@ -23,7 +21,8 @@ export async function measureGap(opts: {
     form.append("mode", opts.mode);
     form.append("points_json", JSON.stringify(opts.points ?? []));
 
-    const res = await fetch(`${API_BASE}/measure`, {
+    const url = API_BASE ? `${API_BASE}/measure` : "/api/measure";
+    const res = await fetch(url, {
         method: "POST",
         body: form
     });
